@@ -1,0 +1,9 @@
+asgiref==3.11.1
+Django==6.0.3
+django-debug-toolbar==6.3.0
+sqlparse==0.5.5
+tzdata==2025.3
+djangorestframework==3.17.1
+Markdown==3.10.2
+django-filter==25.2
+pygments==2.20.0
