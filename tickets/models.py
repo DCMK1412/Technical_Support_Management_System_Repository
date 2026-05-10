@@ -15,7 +15,7 @@ class User(AbstractUser):
         return f"{self.username} - {self.role}"
     
 
-class Cateogry(models.Model):
+class Category(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null = True)
     created_time= models.DateTimeField(auto_now_add= True) 
@@ -44,7 +44,7 @@ class Ticket(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField()
 
-    category = models.ForeignKey(Cateogry, on_delete=models.CASCADE, related_name='tickets')
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='tickets')
     created_by= models.ForeignKey(User, on_delete=models.CASCADE, related_name= 'created_tickets')
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL,null = True, blank=True, related_name='assigned_tickets')
 
