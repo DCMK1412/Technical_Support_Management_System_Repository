@@ -18,7 +18,7 @@ class User(AbstractUser):
 class Category(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null = True)
-    created_time= models.DateTimeField(auto_now_add= True) 
+    created_at= models.DateTimeField(auto_now_add= True) 
 
     class Meta:
         verbose_name_plural = "Categories"    #توحيد Categories مع Categorie
