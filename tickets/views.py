@@ -72,6 +72,17 @@ class TicketDetail(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def patch(self, request, pk, format=None):
+        ticket = self.get_object(pk)
+        if ticket is None:
+            return Response({'error': 'Ticket not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = TicketSerializer(ticket, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
         ticket = self.get_object(pk)
@@ -80,3 +91,5 @@ class TicketDetail(APIView):
             
         ticket.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    
