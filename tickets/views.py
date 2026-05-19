@@ -2,6 +2,10 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from .models import Ticket, Category
 
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .serializers import TicketSerializer
 # Create your views here.
 
 @login_required
@@ -29,3 +33,50 @@ def admin_dashboard(request):
     }
     
     return render(request, 'tickets/dashboard.html', context)
+
+class TicketList(APIView):
+    def get(self, request, format=None):
+        tickets = Ticket.objects.all()
+        serializer = TicketSerializer(tickets, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, format=None):
+        serializer = TicketSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class TicketDetail(APIView):
+    def get_object(self, pk):
+        try:
+            return Ticket.objects.get(pk=pk)
+        except Ticket.DoesNotExist:
+            return None
+
+    def get(self, request, pk, format=None):
+        ticket = self.get_object(pk)
+        if ticket is None:
+            return Response({'error': 'Ticket not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = TicketSerializer(ticket)
+        return Response(serializer.data)
+
+    def put(self, request, pk, format=None):
+        ticket = self.get_object(pk)
+        if ticket is None:
+            return Response({'error': 'Ticket not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+        serializer = TicketSerializer(ticket, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, format=None):
+        ticket = self.get_object(pk)
+        if ticket is None:
+            return Response({'error': 'Ticket not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+        ticket.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
