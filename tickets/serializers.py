@@ -27,3 +27,19 @@ class TicketSerializer(serializers.Serializer):
         instance.created_by = validated_data.get('created_by', instance.created_by)
         instance.save()
         return instance
+    
+
+class CategorySerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(required=True, max_length=100)
+    description = serializers.CharField(style={'base_template': 'textarea.html'}, required=False, allow_blank=True, allow_null=True)
+    created_at = serializers.DateTimeField(read_only=True)
+
+    def create(self, validated_data):
+        return Category.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        instance.name = validated_data.get('name', instance.name)
+        instance.description = validated_data.get('description', instance.description)
+        instance.save()
+        return instance
