@@ -1,17 +1,74 @@
 from django.shortcuts import render
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.decorators import login_required
-from .models import Ticket, Category
+from django.contrib.auth import login
 
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .serializers import TicketSerializer, CategorySerializer
-# Create your views here.
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import AllowAny, IsAuthenticated
+
+from .models import Ticket, Category
+from .serializers import (
+    TicketSerializer, 
+    CategorySerializer, 
+    RegisterSerializer, 
+    UserSerializer
+)
+
+User = get_user_model()
+
+# 1. Authentication Views (API)
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, format=None):
+        serializer = RegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({
+                "user": UserSerializer(user).data,
+                "token": token.key
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, format=None):
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        if not username or not password:
+            return Response({'error': 'Please Enter username and password'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = authenticate(username=username, password=password)
+
+        if user is not None:
+            login(request, user) 
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({
+                "message": "Login successful",
+                "user": UserSerializer(user).data,
+                "token": token.key
+            }, status=status.HTTP_200_OK)
+        
+        return Response({'error': 'Incorrect username or password'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+# 2. Template Views (Dashboard)
+def login_page(request):
+    return render(request, 'tickets/login.html')
+
+def tickets_page(request):
+    return render(request, 'tickets/tickets.html')
 
 @login_required
 def admin_dashboard(request):
     total_tickets = Ticket.objects.count()
-
     open_tickets = Ticket.objects.filter(status='OPEN').count()
     in_progress_tickets = Ticket.objects.filter(status='IN_PROGRESS').count()
     waiting_tickets = Ticket.objects.filter(status='WAITING_FOR_USER').count()
@@ -31,10 +88,14 @@ def admin_dashboard(request):
         'recent_tickets': recent_tickets,
         'categories': categories,
     }
-    
     return render(request, 'tickets/dashboard.html', context)
 
+
+
+# 3. Tickets Views (API)
 class TicketList(APIView):
+    permission_classes = [IsAuthenticated] 
+
     def get(self, request, format=None):
         tickets = Ticket.objects.all()
         serializer = TicketSerializer(tickets, many=True)
@@ -43,12 +104,14 @@ class TicketList(APIView):
     def post(self, request, format=None):
         serializer = TicketSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(created_by=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 
 class TicketDetail(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get_object(self, pk):
         try:
             return Ticket.objects.get(pk=pk)
@@ -92,8 +155,12 @@ class TicketDetail(APIView):
         ticket.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-    
+
+
+# 4. Categories Views (API)
 class CategoryList(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, format=None):
         categories = Category.objects.all()
         serializer = CategorySerializer(categories, many=True)
@@ -105,8 +172,11 @@ class CategoryList(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+
 class CategoryDetail(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get_object(self, pk):
         try:
             return Category.objects.get(pk=pk)
@@ -138,3 +208,4 @@ class CategoryDetail(APIView):
             
         category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
