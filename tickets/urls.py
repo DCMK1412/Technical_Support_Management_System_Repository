@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views import RegisterView, register_ui
 
 app_name = 'tickets'
 
@@ -17,4 +18,7 @@ urlpatterns = [
 
     path('auth/register/', views.RegisterView.as_view(), name='auth-register'),
     path('auth/login/', views.LoginView.as_view(), name='auth-login'),
+
+    path('register-ui/', register_ui, name='register-ui'),
+    path('auth/register/', RegisterView.as_view(), name='auth-register'),
 ]
