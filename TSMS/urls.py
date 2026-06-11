@@ -20,6 +20,7 @@ from tickets.views import admin_dashboard
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('dashboard/', admin_dashboard, name='admin_dashboard'), # رابط الداشبورد الحالي
+    path('dashboard/', admin_dashboard, name='admin_dashboard'), 
     path('api/', include('tickets.urls')),
+    
 ]

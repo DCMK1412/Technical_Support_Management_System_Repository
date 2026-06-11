@@ -3,18 +3,21 @@ from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 
+from rest_framework import viewsets, permissions
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from .models import Ticket, Category
+from .models import Ticket, Category,TicketComment
 from .serializers import (
     TicketSerializer, 
     CategorySerializer, 
     RegisterSerializer, 
-    UserSerializer
+    UserSerializer, 
+    TicketCommentSerializer
 )
 
 User = get_user_model()
@@ -214,4 +217,20 @@ class CategoryDetail(APIView):
             
         category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+# 5. Comments Views (API)    
+class CommentCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk, format=None):
+        try:
+            ticket = Ticket.objects.get(pk=pk)
+        except Ticket.DoesNotExist:
+            return Response({'error': 'Ticket not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = TicketCommentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(ticket=ticket, author=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     

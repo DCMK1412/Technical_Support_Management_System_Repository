@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Ticket, Category
+from .models import Ticket, Category, TicketComment
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -52,3 +52,39 @@ class TicketSerializer(serializers.ModelSerializer):
         model = Ticket
         fields = ['id', 'title', 'description', 'category', 'priority', 'status', 'created_by', 'created_at']
         read_only_fields = ['created_by', 'created_at']
+
+
+
+class TicketCommentSerializer(serializers.ModelSerializer):
+    author_name = serializers.ReadOnlyField(source='author.username')
+
+    class Meta:
+        model = TicketComment
+        fields = ['id', 'ticket', 'author', 'author_name', 'message', 'created_at']
+        read_only_fields = ['author', 'created_at']
+        extra_kwargs = {
+            'ticket': {'required': False},
+            'author': {'required': False}
+        }
+
+class TicketSerializer(serializers.ModelSerializer):
+    comments = serializers.SerializerMethodField()
+    
+    created_by_name = serializers.ReadOnlyField(source='created_by.username')
+    assigned_to_name = serializers.ReadOnlyField(source='assigned_to.username')
+    category_name = serializers.ReadOnlyField(source='category.name')
+
+    class Meta:
+        model = Ticket
+        fields = [
+            'id', 'title', 'description', 'created_by', 'created_by_name', 
+            'assigned_to', 'assigned_to_name', 'category', 'category_name', 
+            'status', 'priority', 'created_at', 'updated_at', 'comments'
+        ]
+        read_only_fields = ['created_by', 'created_at', 'updated_at']
+
+    
+    def get_comments(self, obj):
+        comments = TicketComment.objects.filter(ticket=obj).order_by('-created_at')
+        return TicketCommentSerializer(comments, many=True).data
+    
