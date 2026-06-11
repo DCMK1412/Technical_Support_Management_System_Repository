@@ -11,13 +11,19 @@ from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from .models import Ticket, Category,TicketComment
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404
+
+from .models import Ticket, Category, TicketComment, TicketAttachment
 from .serializers import (
     TicketSerializer, 
     CategorySerializer, 
     RegisterSerializer, 
     UserSerializer, 
-    TicketCommentSerializer
+    TicketCommentSerializer,
+    TicketAttachmentSerializer
 )
 
 User = get_user_model()
@@ -234,3 +240,27 @@ class CommentCreateView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+# 6. Attachments Views (API) 
+class TicketAttachmentListCreateView(generics.ListCreateAPIView):
+    serializer_class = TicketAttachmentSerializer
+    permission_classes = [IsAuthenticated]
+
+    # 1. Fetch attachments for a specific ticket only
+    def get_queryset(self):
+        ticket_id = self.kwargs['ticket_id']
+        ticket = get_object_or_404(Ticket, id=ticket_id)
+        
+        if self.request.user.role == 'USER' and ticket.created_by != self.request.user:
+            raise PermissionDenied("authorization denied to view attachments for this ticket.")
+            
+        return TicketAttachment.objects.filter(ticket=ticket)
+
+    # 2. Upload a new attachment and automatically link it to the ticket and user
+    def perform_create(self, serializer):
+        ticket_id = self.kwargs['ticket_id']
+        ticket = get_object_or_404(Ticket, id=ticket_id)
+        
+        if self.request.user.role == 'USER' and ticket.created_by != self.request.user:
+            raise PermissionDenied("you don't have permission to add attachments to this ticket.")
+            
+        serializer.save(ticket=ticket, uploaded_by=self.request.user)

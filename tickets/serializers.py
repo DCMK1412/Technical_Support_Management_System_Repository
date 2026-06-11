@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Ticket, Category, TicketComment
+from .models import Ticket, Category, TicketComment, TicketAttachment
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -88,3 +88,14 @@ class TicketSerializer(serializers.ModelSerializer):
         comments = TicketComment.objects.filter(ticket=obj).order_by('-created_at')
         return TicketCommentSerializer(comments, many=True).data
     
+
+class TicketAttachmentSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.ReadOnlyField(source='uploaded_by.username')
+
+    class Meta:
+        model = TicketAttachment
+        fields = ['id', 'ticket', 'file', 'uploaded_by', 'uploaded_by_name', 'uploaded_at']
+        extra_kwargs = {
+            'ticket': {'required': False},
+            'uploaded_by': {'required': False}
+        }
