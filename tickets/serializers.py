@@ -39,19 +39,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'name', 'description', 'created_at']
-
-
-
-class TicketSerializer(serializers.ModelSerializer):
-    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
-    class Meta:
-        model = Ticket
-        fields = ['id', 'title', 'description', 'category', 'priority', 'status', 'created_by', 'created_at']
-        read_only_fields = ['created_by', 'created_at']
 
 
 
@@ -67,9 +59,10 @@ class TicketCommentSerializer(serializers.ModelSerializer):
             'author': {'required': False}
         }
 
+
+
 class TicketSerializer(serializers.ModelSerializer):
     comments = serializers.SerializerMethodField()
-    
     created_by_name = serializers.ReadOnlyField(source='created_by.username')
     assigned_to_name = serializers.ReadOnlyField(source='assigned_to.username')
     category_name = serializers.ReadOnlyField(source='category.name')

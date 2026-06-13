@@ -74,6 +74,23 @@ class LoginView(APIView):
         return Response({'error': 'Incorrect username or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, format=None):
+        request.user.auth_token.delete()
+        return Response({"message": "Successfully logged out."}, status=status.HTTP_200_OK)
+
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
 # 2. Template Views (Dashboard)
 def login_page(request):
     return render(request, 'tickets/login.html')
@@ -112,14 +129,37 @@ class TicketList(APIView):
     permission_classes = [IsAuthenticated] 
 
     def get(self, request, format=None):
-        tickets = Ticket.objects.all()
-        serializer = TicketSerializer(tickets, many=True)
+        user = request.user
+        
+        if user.role == 'ADMIN':
+            tickets = Ticket.objects.all()
+        elif user.role == 'SUPPORT':
+            tickets = Ticket.objects.filter(assigned_to=user)
+        else:
+            tickets = Ticket.objects.filter(created_by=user)
+
+        # search and filter 
+        search = request.query_params.get('search')
+        ticket_status = request.query_params.get('status')
+        priority = request.query_params.get('priority')
+        category = request.query_params.get('category')
+
+        if search:
+            tickets = tickets.filter(title__icontains=search)
+        if ticket_status:
+            tickets = tickets.filter(status=ticket_status)
+        if priority:
+            tickets = tickets.filter(priority=priority)
+        if category:
+            tickets = tickets.filter(category_id=category)
+
+        serializer = TicketSerializer(tickets.order_by('-created_at'), many=True)
         return Response(serializer.data)
 
     def post(self, request, format=None):
         serializer = TicketSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(created_by=request.user)
+            serializer.save(created_by=request.user, status='OPEN')
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -127,35 +167,52 @@ class TicketList(APIView):
 class TicketDetail(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_object(self, pk):
+    def get_object(self, pk, user):
         try:
-            return Ticket.objects.get(pk=pk)
+            ticket = Ticket.objects.get(pk=pk)
+
+            if user.role == 'ADMIN':
+                return ticket
+            
+            if user.role == 'USER':
+                if ticket.created_by != user:
+                    return None
+                return ticket
+
+            if user.role == 'SUPPORT':
+                if ticket.assigned_to is not None and ticket.assigned_to != user:
+                    return None  
+                return ticket
+
+            return None
         except Ticket.DoesNotExist:
             return None
 
+
     def get(self, request, pk, format=None):
-        ticket = self.get_object(pk)
+        ticket = self.get_object(pk, request.user)
         if ticket is None:
-            return Response({'error': 'Ticket not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Ticket not found or permission denied'}, status=status.HTTP_404_NOT_FOUND)
         serializer = TicketSerializer(ticket)
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
-        ticket = self.get_object(pk)
-        if ticket is None:
-            return Response({'error': 'Ticket not found'}, status=status.HTTP_404_NOT_FOUND)
-            
-        serializer = TicketSerializer(ticket, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return self.patch(request, pk, format)
     
     def patch(self, request, pk, format=None):
-        ticket = self.get_object(pk)
+        ticket = self.get_object(pk, request.user)
         if ticket is None:
-            return Response({'error': 'Ticket not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Ticket not found or permission denied'}, status=status.HTTP_404_NOT_FOUND)
         
+        if request.user.role == 'USER' and ('priority' in request.data or 'assigned_to' in request.data):
+            return Response({'error': 'Not allowed'}, status=status.HTTP_403_FORBIDDEN)
+        
+        if request.user.role == 'SUPPORT':
+            allowed_support_fields = {'status', 'priority', 'assigned_to'}
+    
+            if not set(request.data.keys()).issubset(allowed_support_fields):
+                return Response({'error': 'Support agents can only update status or priority'}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = TicketSerializer(ticket, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -163,13 +220,15 @@ class TicketDetail(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
-        ticket = self.get_object(pk)
-        if ticket is None:
-            return Response({'error': 'Ticket not found'}, status=status.HTTP_404_NOT_FOUND)
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Admins only'}, status=status.HTTP_403_FORBIDDEN)
             
-        ticket.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-    
+        ticket = self.get_object(pk, request.user)
+        if ticket:
+            ticket.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({'error': 'Ticket not found'}, status=status.HTTP_404_NOT_FOUND)
+
 
 
 # 4. Categories Views (API)
@@ -182,6 +241,9 @@ class CategoryList(APIView):
         return Response(serializer.data)
 
     def post(self, request, format=None):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Admin access only'}, status=status.HTTP_403_FORBIDDEN)
+        
         serializer = CategorySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -206,6 +268,9 @@ class CategoryDetail(APIView):
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Admin access only'}, status=status.HTTP_403_FORBIDDEN)
+        
         category = self.get_object(pk)
         if category is None:
             return Response({'error': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -217,22 +282,42 @@ class CategoryDetail(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Admin access only'}, status=status.HTTP_403_FORBIDDEN)
+
         category = self.get_object(pk)
         if category is None:
             return Response({'error': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
             
         category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
     
 # 5. Comments Views (API)    
 class CommentCreateView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk, format=None):
+        try:
+            ticket = Ticket.objects.get(pk=pk)
+        except Ticket.DoesNotExist:
+            return Response({'error': 'Ticket not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.user.role == 'USER' and ticket.created_by != request.user:
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+        comments = TicketComment.objects.filter(ticket=ticket)
+        serializer = TicketCommentSerializer(comments, many=True)
+        return Response(serializer.data)
 
     def post(self, request, pk, format=None):
         try:
             ticket = Ticket.objects.get(pk=pk)
         except Ticket.DoesNotExist:
             return Response({'error': 'Ticket not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+        if request.user.role == 'USER' and ticket.created_by != request.user:
+            return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = TicketCommentSerializer(data=request.data)
         if serializer.is_valid():
@@ -240,6 +325,8 @@ class CommentCreateView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+
+
 # 6. Attachments Views (API) 
 class TicketAttachmentListCreateView(generics.ListCreateAPIView):
     serializer_class = TicketAttachmentSerializer
@@ -264,3 +351,47 @@ class TicketAttachmentListCreateView(generics.ListCreateAPIView):
             raise PermissionDenied("you don't have permission to add attachments to this ticket.")
             
         serializer.save(ticket=ticket, uploaded_by=self.request.user)
+
+
+
+# 7. User Management Views (API)
+class UserAdminListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Admin access only'}, status=status.HTTP_403_FORBIDDEN)
+        users = User.objects.all().order_by('-date_joined')
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
+
+class UserRoleUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk, format=None):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Admin access only'}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            user_to_update = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        new_role = request.data.get('role')
+        if new_role and new_role in ['USER', 'SUPPORT', 'ADMIN']:
+            user_to_update.role = new_role
+            user_to_update.save()
+            
+        return Response(UserSerializer(user_to_update).data, status=status.HTTP_200_OK)
+    
+class UserDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk, format=None):
+        if request.user.role != 'ADMIN':
+            return Response({'error': 'Admin access only'}, status=status.HTTP_403_FORBIDDEN)
+        
+        user = get_object_or_404(User, pk=pk)
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
