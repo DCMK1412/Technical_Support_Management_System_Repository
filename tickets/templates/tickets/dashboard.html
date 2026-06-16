@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TSMS - Admin Dashboard</title>
+    <title>TSMS - Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans antialiased">
@@ -13,108 +13,105 @@
             <span class="text-2xl font-bold tracking-wider text-blue-500">TSMS</span>
             <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded border border-blue-500/30 font-mono">v1.0</span>
         </div>
-        <div class="flex items-center space-x-4">
-            <span class="text-sm text-gray-400">Welcome, <strong class="text-gray-200">{{ request.user.username }}</strong></span>
-            <a href="/admin/" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded transition">Django Admin</a>
+        <div class="flex items-center space-x-4" id="navLinks">
+            <a href="/tickets/tickets-ui/" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded transition font-medium">Tickets</a>
+            <button onclick="logout()" class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-3 py-1.5 rounded transition font-medium cursor-pointer">Sign Out</button>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        <div class="mb-8">
-            <h1 class="text-3xl font-extrabold tracking-tight text-white">System Overview</h1>
-            <p class="text-sm text-gray-400 mt-1">Real-time metrics and ticketing analytics.</p>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
-            
-            <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-sm border-l-4 border-l-blue-500">
-                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Open</p>
-                <p class="text-2xl font-bold text-blue-400 mt-1 font-mono">{{ open_tickets }}</p>
-            </div>
-
-            <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-sm border-l-4 border-l-purple-500">
-                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">In Progress</p>
-                <p class="text-2xl font-bold text-purple-400 mt-1 font-mono">{{ in_progress_tickets }}</p>
-            </div>
-
-            <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-sm border-l-4 border-l-yellow-500">
-                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Waiting on User</p>
-                <p class="text-2xl font-bold text-yellow-400 mt-1 font-mono">{{ waiting_tickets }}</p>
-            </div>
-
-            <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-sm border-l-4 border-l-teal-500">
-                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Resolved</p>
-                <p class="text-2xl font-bold text-teal-400 mt-1 font-mono">{{ resolved_tickets }}</p>
-            </div>
-
-            <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-sm border-l-4 border-l-red-500">
-                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Closed</p>
-                <p class="text-2xl font-bold text-red-400 mt-1 font-mono">{{ closed_tickets }}</p>
-            </div>
-
-        </div>
-
-        <div class="mb-6 flex justify-end">
-            <span class="bg-gray-800 border border-gray-700 text-gray-300 px-4 py-2 rounded-lg text-sm font-medium shadow-sm">
-                Total System Tickets: <strong class="text-white font-mono ml-1">{{ total_tickets }}</strong>
-            </span>
-        </div>
-
-        <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-sm">
-            <div class="px-6 py-4 border-b border-gray-700 bg-gray-800/50 flex justify-between items-center">
-                <h2 class="text-lg font-semibold text-white">Recent Tickets</h2>
-                <span class="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">Latest 5</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-900/50 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-700">
-                            <th class="px-6 py-3">ID</th>
-                            <th class="px-6 py-3">Title</th>
-                            <th class="px-6 py-3">Category</th>
-                            <th class="px-6 py-3">Priority</th>
-                            <th class="px-6 py-3">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-700 text-sm">
-                        {% for ticket in recent_tickets %}
-                        <tr class="hover:bg-gray-700/30 transition">
-                            <td class="px-6 py-4 font-mono text-gray-400">#{{ ticket.id }}</td>
-                            <td class="px-6 py-4 font-medium text-white">{{ ticket.title }}</td>
-                            <td class="px-6 py-4 text-gray-300">{{ ticket.category.name }}</td>
-                            <td class="px-6 py-4">
-                                <span class="px-2.5 py-1 text-xs rounded-full font-medium border
-                                    {% if ticket.priority == 'HIGH' or ticket.priority == 'URGENT' %} bg-red-500/10 text-red-400 border-red-500/20
-                                    {% elif ticket.priority == 'MEDIUM' %} bg-yellow-500/10 text-yellow-400 border-yellow-500/20
-                                    {% else %} bg-blue-500/10 text-blue-400 border-blue-500/20 {% endif %}">
-                                    {{ ticket.get_priority_display }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="px-2.5 py-1 text-xs rounded-full font-medium border
-                                    {% if ticket.status == 'OPEN' %} bg-blue-500/10 text-blue-400 border-blue-500/20
-                                    {% elif ticket.status == 'IN_PROGRESS' %} bg-purple-500/10 text-purple-400 border-purple-500/20
-                                    {% elif ticket.status == 'WAITING_FOR_USER' %} bg-yellow-500/10 text-yellow-400 border-yellow-500/20
-                                    {% elif ticket.status == 'RESOLVED' %} bg-teal-500/10 text-teal-400 border-teal-500/20
-                                    {% else %} bg-red-500/10 text-red-400 border-red-500/20 {% endif %}">
-                                    {{ ticket.get_status_display }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="px-6 py-10 text-center text-gray-500">
-                                No tickets found in the database.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="mb-8 flex justify-between items-end">
+            <div>
+                <h2 class="text-2xl font-bold text-white" id="welcomeMessage">Dashboard</h2>
+                <p class="text-sm text-gray-400 mt-1" id="roleSubtitle">Loading your statistics...</p>
             </div>
         </div>
 
+        <div id="metricsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            </div>
     </main>
+
+<script>
+        const token = localStorage.getItem('user_token');
+        const role = localStorage.getItem('user_role');
+
+        if (!token) {
+            window.location.href = '/tickets/login-ui/';
+        }
+
+        if (role === 'ADMIN') {
+            const navLinks = document.getElementById('navLinks');
+            navLinks.insertAdjacentHTML('afterbegin', `
+                <a href="/tickets/users-ui/" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded transition font-medium">Users</a>
+                <a href="/tickets/categories-ui/" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded transition font-medium">Categories</a>
+            `);
+        }
+
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/tickets/api-dashboard/', {
+                    headers: { 'Authorization': 'Token ' + token }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    renderMetrics(data.metrics, data.role);
+                } else {
+                    if (response.status === 401) logout();
+                }
+            } catch (error) {
+                console.error('Error fetching dashboard:', error);
+            }
+         }
+
+            function renderMetrics(metrics, userRole) {
+                document.getElementById('welcomeMessage').innerText = `Welcome back`;
+                document.getElementById('roleSubtitle').innerText = `Overview for ${userRole} account`;
+
+                const grid = document.getElementById('metricsGrid');
+                let cardsHTML = '';
+
+                const createCard = (title, value, color) => `
+                    <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 shadow-sm border-l-4 border-l-${color}-500">
+                        <div class="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">${title}</div>
+                        <div class="text-3xl font-extrabold text-white">${value || 0}</div>
+                    </div>
+                `;
+
+                if (userRole === 'ADMIN') {
+                    cardsHTML += createCard('Total Tickets', metrics.total, 'blue');
+                    cardsHTML += createCard('Open Tickets', metrics.open, 'yellow');
+                    cardsHTML += createCard('In Progress', metrics.in_progress, 'purple');
+                    cardsHTML += createCard('Pending', metrics.pending, 'orange'); // كرت جديد
+                    cardsHTML += createCard('Resolved', metrics.resolved, 'green'); // كرت جديد
+                    cardsHTML += createCard('Closed', metrics.closed, 'teal');
+                    cardsHTML += createCard('Total Users', metrics.users_count, 'gray');
+                    cardsHTML += createCard('Support Staff', metrics.support_count, 'red');
+                } else if (userRole === 'SUPPORT') {
+                    cardsHTML += createCard('Assigned To Me', metrics.assigned_to_me, 'blue');
+                    cardsHTML += createCard('Open Tickets', metrics.open, 'yellow');
+                    cardsHTML += createCard('In Progress', metrics.in_progress, 'purple');
+                    cardsHTML += createCard('Pending', metrics.pending, 'orange'); // كرت جديد
+                    cardsHTML += createCard('Resolved', metrics.resolved, 'green'); // كرت جديد
+                    cardsHTML += createCard('Closed', metrics.closed, 'teal');
+                } else {
+                    cardsHTML += createCard('My Open Tickets', metrics.open, 'yellow');
+                    cardsHTML += createCard('In Progress', metrics.in_progress, 'purple');
+                    cardsHTML += createCard('Pending', metrics.pending, 'orange'); // كرت جديد
+                    cardsHTML += createCard('Resolved', metrics.resolved, 'green'); // كرت جديد
+                    cardsHTML += createCard('Closed', metrics.closed, 'teal');
+                }
+
+                grid.innerHTML = cardsHTML;
+            }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/tickets/login-ui/';
+        }
+
+        fetchDashboardData();
+    </script>
 
 </body>
 </html>

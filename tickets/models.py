@@ -79,3 +79,4 @@ class TicketAttachment(models.Model):
 
     def __str__(self):
         return f"Attachment for {self.ticket.id}"
+    

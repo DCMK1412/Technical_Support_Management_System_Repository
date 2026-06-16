@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSMS - Ticket Details</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans antialiased">
+
+    <nav class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+            <span class="text-2xl font-bold tracking-wider text-blue-500">TSMS</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <a href="/tickets/tickets-ui/" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded transition font-medium">Back to Tickets</a>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-2 space-y-6">
+            
+            <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 shadow-sm">
+                <div class="flex justify-between items-start mb-4 border-b border-gray-700 pb-4">
+                    <h1 id="t-title" class="text-2xl font-bold text-white">Loading...</h1>
+                    <span id="t-status" class="px-3 py-1 text-sm rounded-full font-medium border">--</span>
+                </div>
+                
+                <p id="t-desc" class="text-gray-300 leading-relaxed mb-6 bg-gray-900 p-4 rounded-lg border border-gray-700">
+                    ...
+                </p>
+
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                    <div class="bg-gray-900 p-3 rounded border border-gray-700">
+                        <span class="text-gray-500 block text-xs mb-1">Requester</span>
+                        <span id="t-creator" class="font-medium text-white">--</span>
+                    </div>
+                    <div class="bg-gray-900 p-3 rounded border border-gray-700">
+                        <span class="text-gray-500 block text-xs mb-1">Assigned Staff</span>
+                        <span id="t-assigned" class="font-medium text-green-400">--</span>
+                    </div>
+                    <div class="bg-gray-900 p-3 rounded border border-gray-700">
+                        <span class="text-gray-500 block text-xs mb-1">Priority</span>
+                        <span id="t-priority" class="font-medium">--</span>
+                    </div>
+                    <div class="bg-gray-900 p-3 rounded border border-gray-700">
+                        <span class="text-gray-500 block text-xs mb-1">Category</span>
+                        <span id="t-category" class="font-medium text-white">--</span>
+                    </div>
+                    <div class="bg-gray-900 p-3 rounded border border-gray-700">
+                        <span class="text-gray-500 block text-xs mb-1">Created At</span>
+                        <span id="t-created" class="font-mono text-xs text-gray-300">--</span>
+                    </div>
+                    <div class="bg-gray-900 p-3 rounded border border-gray-700">
+                        <span class="text-gray-500 block text-xs mb-1">Last Updated</span>
+                        <span id="t-updated" class="font-mono text-xs text-gray-300">--</span>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-gray-700">
+                    <span class="text-gray-500 block text-xs mb-2">Attachments</span>
+                    <div id="t-attachment" class="text-sm">No attachment</div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 shadow-sm">
+                <h3 class="text-lg font-bold text-white mb-4">Comments & Replies</h3>
+                <div id="commentsList" class="space-y-4 mb-6 max-h-96 overflow-y-auto pr-2">
+                    </div>
+
+                <div class="border-t border-gray-700 pt-4">
+                    <textarea id="commentText" rows="3" placeholder="Write your reply here..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-100 focus:outline-none focus:border-blue-500 transition mb-3"></textarea>
+                    <div class="flex justify-between items-center">
+                        <input type="file" id="commentAttachment" class="text-sm text-gray-400 file:mr-4 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:bg-gray-700 file:text-white cursor-pointer">
+                        <button onclick="submitComment()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-2 rounded-lg transition text-sm cursor-pointer">
+                            Submit Reply
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="controlPanel" class="space-y-6 hidden">
+            
+            <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 shadow-sm">
+                <h3 class="text-md font-bold text-white mb-4">Change Ticket Status</h3>
+                <div class="space-y-2">
+                    <button onclick="updateTicketStatus('IN_PROGRESS')" class="w-full bg-purple-600/20 text-purple-400 border border-purple-600 hover:bg-purple-600 hover:text-white py-2 rounded transition text-sm cursor-pointer">In Progress</button>
+                    <button onclick="updateTicketStatus('WAITING_FOR_USER')" class="w-full bg-yellow-600/20 text-yellow-400 border border-yellow-600 hover:bg-yellow-600 hover:text-white py-2 rounded transition text-sm cursor-pointer">Waiting for User</button>
+                    <button onclick="updateTicketStatus('RESOLVED')" class="w-full bg-teal-600/20 text-teal-400 border border-teal-600 hover:bg-teal-600 hover:text-white py-2 rounded transition text-sm cursor-pointer">Resolved</button>
+                    <button onclick="updateTicketStatus('CLOSED')" class="w-full bg-red-600/20 text-red-400 border border-red-600 hover:bg-red-600 hover:text-white py-2 rounded transition text-sm cursor-pointer">Close Ticket</button>
+                </div>
+            </div>
+
+            <div id="assignPanel" class="bg-gray-800 rounded-xl border border-gray-700 p-6 shadow-sm hidden">
+                <h3 class="text-md font-bold text-white mb-4">Assign Ticket to Staff</h3>
+                <select id="supportUserSelect" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-gray-100 mb-3 text-sm">
+                    <option value="">Select Staff...</option>
+                </select>
+                <button onclick="assignTicket()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded transition text-sm font-bold cursor-pointer">
+                    Save Assignment
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+<script>
+        const token = localStorage.getItem('user_token');
+        const userRole = localStorage.getItem('user_role');
+        const urlParams = new URLSearchParams(window.location.search);
+        const ticketId = urlParams.get('id');
+
+        if (!token || !ticketId) {
+            window.location.href = '/tickets/tickets-ui/';
+        }
+
+        if (userRole === 'SUPPORT' || userRole === 'ADMIN') {
+            document.getElementById('controlPanel').classList.remove('hidden');
+        }
+        if (userRole === 'ADMIN') {
+            document.getElementById('assignPanel').classList.remove('hidden');
+            loadSupportUsers();
+        }
+
+        async function loadTicketDetails() {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/tickets/api/tickets/${ticketId}/`, {
+                    headers: { 'Authorization': 'Token ' + token }
+                });
+                if (response.ok) {
+                    const ticket = await response.json();
+                    
+                    // Log out ticket structure to help debug if keys ever change
+                    console.log("Ticket API Response Details:", ticket);
+
+                    document.getElementById('t-title').innerText = `#${ticket.id} - ${ticket.title}`;
+                    document.getElementById('t-desc').innerText = ticket.description;
+                    document.getElementById('t-status').innerText = ticket.status;
+                    document.getElementById('t-creator').innerText = ticket.created_by_name;
+                    document.getElementById('t-assigned').innerText = ticket.assigned_to_name ? ticket.assigned_to_name : 'Unassigned';
+                    document.getElementById('t-priority').innerText = ticket.priority;
+                    document.getElementById('t-category').innerText = ticket.category_name || ticket.category; // Uses cleaner descriptor name fallback
+                    
+                    document.getElementById('t-created').innerText = new Date(ticket.created_at).toLocaleString();
+                    document.getElementById('t-updated').innerText = new Date(ticket.updated_at).toLocaleString();
+
+                    // --- OPTIMIZED ATTACHMENT RENDERING UI ---
+                    const attachmentContainer = document.getElementById('t-attachment');
+                    if (ticket.attachment) {
+                        // Extract human-readable file name from the backend URL string
+                        const fileName = ticket.attachment.split('/').pop() || 'Download Attachment';
+                        
+                        attachmentContainer.innerHTML = `
+                            <div class="flex items-center space-x-2 bg-gray-900 p-3 rounded-lg border border-gray-700 mt-1 max-w-fit">
+                                <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                                </svg>
+                                <a href="${ticket.attachment}" target="_blank" class="text-sm text-blue-400 font-medium hover:underline truncate max-w-xs">
+                                    ${fileName}
+                                </a>
+                            </div>
+                        `;
+                    } else {
+                        attachmentContainer.innerHTML = `<span class="text-gray-500 italic text-xs">No attachment</span>`;
+                    }
+                }
+            } catch (error) { console.error(error); }
+        }
+
+        async function loadComments() {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/tickets/api/tickets/${ticketId}/comments/`, {
+                    headers: { 'Authorization': 'Token ' + token }
+                });
+                
+                if (response.ok) {
+                    const comments = await response.json();
+                    const list = document.getElementById('commentsList');
+                    list.innerHTML = '';
+                    
+                    if(comments.length === 0) {
+                        list.innerHTML = '<div class="text-gray-500 text-sm italic">No replies yet.</div>';
+                        return;
+                    }
+                    
+                    comments.forEach(comment => {
+                        const author = comment.author_name || `User #${comment.author || 'Unknown'}`;
+                        const message = comment.message || comment.content || '';
+                        
+                        list.innerHTML += `
+                            <div class="bg-gray-900 p-4 rounded-lg border border-gray-700">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-bold text-sm text-blue-400">${author}</span>
+                                    <span class="text-xs text-gray-500">${new Date(comment.created_at).toLocaleString()}</span>
+                                </div>
+                                <p class="text-sm text-gray-300 whitespace-pre-line">${message}</p>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (error) { 
+                console.error("Error loading comments:", error); 
+            }
+        }
+
+        async function submitComment() {
+            const contentText = document.getElementById('commentText').value.trim();
+            if (!contentText) return alert('Please write a reply first.');
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/tickets/api/tickets/${ticketId}/comments/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Token ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        message: contentText 
+                    }) 
+                });
+
+                if (response.ok) {
+                    document.getElementById('commentText').value = '';
+                    loadComments(); 
+                } else {
+                    const err = await response.json();
+                    alert('Error sending comment: ' + JSON.stringify(err));
+                }
+            } catch (error) { 
+                console.error("Network error:", error); 
+            }
+        }
+
+        async function updateTicketStatus(newStatus) {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/tickets/api/tickets/${ticketId}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': 'Token ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                if (response.ok) {
+                    alert('Status updated successfully!');
+                    loadTicketDetails();
+                } else {
+                    alert('Failed to update status.');
+                }
+            } catch (error) { console.error(error); }
+        }
+
+        async function loadSupportUsers() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/users/', {
+                    headers: { 'Authorization': 'Token ' + token }
+                });
+                if (response.ok) {
+                    const users = await response.json();
+                    const select = document.getElementById('supportUserSelect');
+                    select.innerHTML = '<option value="">Select Staff...</option>';
+                    users.forEach(user => {
+                        if(user.role === 'SUPPORT' || user.is_staff) {
+                            select.innerHTML += `<option value="${user.id}">${user.username}</option>`;
+                        }
+                    });
+                }
+            } catch (error) { console.error(error); }
+        }
+
+        async function assignTicket() {
+            const userId = document.getElementById('supportUserSelect').value;
+            if(!userId) return alert('Please select a staff member.');
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/tickets/api/tickets/${ticketId}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': 'Token ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ assigned_to: userId })
+                });
+                if (response.ok) {
+                    alert('Ticket assigned successfully!');
+                    loadTicketDetails();
+                } else {
+                    const err = await response.json();
+                    alert('Failed to assign ticket: ' + JSON.stringify(err));
+                }
+            } catch (error) { console.error(error); }
+        }
+
+        // Safe DOM Document Initialization Setup
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTicketDetails();
+            loadComments();
+        });
+    </script>
+</body>
+</html>

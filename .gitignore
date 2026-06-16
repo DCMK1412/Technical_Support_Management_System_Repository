@@ -1,8 +1,14 @@
-
-../venv/
-
-db.sqlite3
-__pycache__/
+# Django
 *.pyc
+__pycache__/
+db.sqlite3
+/media/
+/static_root/
+
+# Environments
+venv/
 .env
-media/
+
+# IDEs
+.vscode/
+.idea/

@@ -14,7 +14,7 @@
             <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded border border-blue-500/30 font-mono">v1.0</span>
         </div>
         <div class="flex items-center space-x-4">
-            <a href="/api/dashboard/" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded transition font-medium">Dashboard</a>
+            <a href="/api/dashboard-ui/" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded transition font-medium">Dashboard</a>
             <button onclick="logout()" class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-3 py-1.5 rounded transition font-medium cursor-pointer">Sign Out</button>
         </div>
     </nav>
@@ -39,6 +39,20 @@
                     <input type="number" id="ticketCategory" required value="1" 
                         class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-100 focus:outline-none focus:border-blue-500 transition font-mono max-w-[120px]">
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Priority</label>
+                    <select id="priority" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-100 focus:outline-none focus:border-blue-500 transition">
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM" selected>Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="URGENT">Urgent</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Attachment (Optional)</label>
+                    <input type="file" id="attachment" 
+                        class="w-full text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
+                </div>
                 <div class="flex justify-end">
                     <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 py-2.5 rounded-lg transition shadow-md cursor-pointer text-sm">
                         Submit Ticket
@@ -47,26 +61,98 @@
             </form>
         </div>
 
-        <div class="mb-4">
-            <h2 class="text-xl font-bold text-white">Your Current Tickets</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Track and manage the status of your reported issues.</p>
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-5 mb-8 shadow-md">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h3 class="text-sm font-bold text-gray-300 uppercase tracking-wider">Search & Filter Tickets</h3>
+                <button id="clearFiltersBtn" class="text-xs text-blue-400 hover:text-blue-300 font-medium transition cursor-pointer">Clear All Filters</button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <input type="text" id="uiSearch" placeholder="Search by title..." 
+                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition">
+                </div>
+                <div>
+                    <select id="uiStatus" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:border-blue-500 transition">
+                        <option value="">All Statuses</option>
+                        <option value="OPEN">Open</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="RESOLVED">Resolved</option>
+                        <option value="CLOSED">Closed</option>
+                    </select>
+                </div>
+                <div>
+                    <select id="uiPriority" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-400 focus:outline-none focus:border-blue-500 transition">
+                        <option value="">All Priorities</option>
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="URGENT">Urgent</option>
+                    </select>
+                </div>
+                <div>
+                    <input type="number" id="uiCategory" placeholder="Category ID" min="1"
+                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition font-mono">
+                </div>
+            </div>
         </div>
 
-        <div id="ticketsList" class="space-y-4">
+        <div id="userView" class="hidden mb-10">
+            <div class="mb-4">
+                <h2 class="text-xl font-bold text-white">Your Current Tickets</h2>
+                <p class="text-xs text-gray-400 mt-0.5">Track and manage the status of your reported issues.</p>
             </div>
+            <div id="userTicketsList" class="space-y-4"></div>
+        </div>
+
+        <div id="staffView" class="hidden mb-10">
+            <div class="mb-4">
+                <h2 class="text-xl font-bold text-green-400">Tickets Assigned To Me</h2>
+                <p class="text-xs text-gray-400 mt-0.5">Tickets directly assigned to you that require your action.</p>
+            </div>
+            <div id="myTicketsList" class="space-y-4 mb-10"></div>
+
+            <div class="mb-4 pt-6 border-t border-gray-800">
+                <h2 class="text-xl font-bold text-white">All Other Tickets</h2>
+                <p class="text-xs text-gray-400 mt-0.5">All other support tickets in the system.</p>
+            </div>
+            <div id="otherTicketsList" class="space-y-4"></div>
+        </div>
+        
     </main>
 
     <script>
-        // 1. Auth Guard
         const token = localStorage.getItem('user_token');
+        const userRole = localStorage.getItem('user_role');
+        const currentUserId = localStorage.getItem('user_id'); 
+        
         if (!token) {
-            window.location.href = '/api/login-ui/';
+            window.location.href = '/tickets/login-ui/';
         }
 
-        // 2. Fetch and Render Tickets Block
+        const isStaff = (userRole === 'SUPPORT' || userRole === 'ADMIN');
+        if (isStaff) {
+            document.getElementById('staffView').classList.remove('hidden');
+        } else {
+            document.getElementById('userView').classList.remove('hidden');
+        }
+
         async function fetchTickets() {
             try {
-                const response = await fetch('http://127.0.0.1:8000/api/tickets/', {
+                const searchVal = document.getElementById('uiSearch').value.strip ? document.getElementById('uiSearch').value.strip() : document.getElementById('uiSearch').value;
+                const statusVal = document.getElementById('uiStatus').value;
+                const priorityVal = document.getElementById('uiPriority').value;
+                const categoryVal = document.getElementById('uiCategory').value;
+
+                const params = new URLSearchParams();
+                if (searchVal) params.append('search', searchVal);
+                if (statusVal) params.append('status', statusVal);
+                if (priorityVal) params.append('priority', priorityVal);
+                if (categoryVal) params.append('category', categoryVal);
+
+                const targetUrl = `http://127.0.0.1:8000/tickets/api/tickets/?${params.toString()}`;
+
+                const response = await fetch(targetUrl, {
                     method: 'GET',
                     headers: {
                         'Authorization': 'Token ' + token,
@@ -76,52 +162,103 @@
 
                 if (response.ok) {
                     const tickets = await response.json();
-                    const listContainer = document.getElementById('ticketsList');
-                    listContainer.innerHTML = ''; 
+                    
+                    const userTicketsContainer = document.getElementById('userTicketsList');
+                    const myTicketsContainer = document.getElementById('myTicketsList');
+                    const otherTicketsContainer = document.getElementById('otherTicketsList');
+                    
+                    userTicketsContainer.innerHTML = '';
+                    myTicketsContainer.innerHTML = '';
+                    otherTicketsContainer.innerHTML = '';
 
-                    if(tickets.length === 0) {
-                        listContainer.innerHTML = `
-                            <div class="bg-gray-800 border border-gray-700 rounded-xl p-8 text-center text-gray-500 text-sm">
-                                No active support tickets found.
-                            </div>`;
-                        return;
-                    }
+                    let userTicketsCount = 0;
+                    let myTicketsCount = 0;
+                    let otherTicketsCount = 0;
 
                     tickets.forEach(ticket => {
-                        // Dynamic styling for status and priorities badges
+                        const myId = parseInt(currentUserId, 10);
+                        const assignedId = (ticket.assigned_to && typeof ticket.assigned_to === 'object') ? parseInt(ticket.assigned_to.id, 10) : parseInt(ticket.assigned_to, 10);
+                        const creatorId = (ticket.created_by && typeof ticket.created_by === 'object') ? parseInt(ticket.created_by.id, 10) : parseInt(ticket.created_by, 10);
+
+                        const isAssignedToMe = (!isNaN(myId) && assignedId === myId);
+
                         let priorityClass = "bg-blue-500/10 text-blue-400 border-blue-500/20";
-                        if (ticket.priority === 'HIGH' || ticket.priority === 'URGENT') {
-                            priorityClass = "bg-red-500/10 text-red-400 border-red-500/20";
-                        } else if (ticket.priority === 'MEDIUM') {
-                            priorityClass = "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
-                        }
+                        if (ticket.priority === 'HIGH' || ticket.priority === 'URGENT') priorityClass = "bg-red-500/10 text-red-400 border-red-500/20";
+                        else if (ticket.priority === 'MEDIUM') priorityClass = "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
 
                         let statusClass = "bg-blue-500/10 text-blue-400 border-blue-500/20";
                         if (ticket.status === 'IN_PROGRESS') statusClass = "bg-purple-500/10 text-purple-400 border-purple-500/20";
-                        else if (ticket.status === 'WAITING_FOR_USER') statusClass = "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
+                        else if (ticket.status === 'WAITING_FOR_USER' || ticket.status === 'PENDING') statusClass = "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
                         else if (ticket.status === 'RESOLVED') statusClass = "bg-teal-500/10 text-teal-400 border-teal-500/20";
                         else if (ticket.status === 'CLOSED') statusClass = "bg-red-500/10 text-red-400 border-red-500/20";
 
+                        let assignmentHtml = `<span class="text-gray-600">Unassigned</span>`;
+                        if (ticket.assigned_to) {
+                            assignmentHtml = isAssignedToMe 
+                                ? `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded text-[11px] font-bold">Assigned to Me</span>`
+                                : `<span class="text-gray-400">Assigned to ${ticket.assigned_to_name || 'Staff #' + assignedId}</span>`;
+                        }
+
+                        let actionButtons = '';
+                        if (isStaff) {
+                            actionButtons = `
+                                <div class="mt-4 pt-4 border-t border-gray-700/50 flex gap-2">
+                                    <button onclick="updateTicketStatus(${ticket.id}, 'IN_PROGRESS')" class="text-xs bg-purple-600 hover:bg-purple-500 text-white px-4 py-1.5 rounded transition cursor-pointer font-medium shadow-sm">Work on it</button>
+                                    <button onclick="updateTicketStatus(${ticket.id}, 'RESOLVED')" class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-4 py-1.5 rounded transition cursor-pointer font-medium shadow-sm">Mark Resolved</button>
+                                    <button onclick="updateTicketStatus(${ticket.id}, 'CLOSED')" class="text-xs bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded transition cursor-pointer font-medium shadow-sm">Close Ticket</button>
+                                </div>
+                            `;
+                        }
+
+                        const createdDate = ticket.created_at ? new Date(ticket.created_at).toLocaleString() : 'N/A';
+
                         const card = `
-                            <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 relative hover:border-gray-600 transition shadow-sm border-r-4 border-r-blue-500">
+                            <div class="bg-gray-800 rounded-xl border ${isAssignedToMe ? 'border-green-500/50 shadow-green-900/10' : 'border-gray-700'} p-6 relative hover:border-gray-600 transition shadow-sm border-l-4 border-l-blue-500">
                                 <div class="flex justify-between items-start mb-2">
-                                    <div class="text-lg font-bold text-white pr-24">${ticket.title}</div>
-                                    <span class="px-2.5 py-0.5 text-xs rounded-full font-medium border font-mono ${statusClass}">
-                                        ${ticket.status}
-                                    </span>
+                                    <a href="/tickets/tickets-detail-ui/?id=${ticket.id}" class="text-lg font-bold text-white hover:text-blue-400 transition cursor-pointer">
+                                        #${ticket.id} - ${ticket.title}
+                                    </a>
+                                    <span class="px-2.5 py-0.5 text-xs rounded-full font-medium border font-mono ${statusClass}">${ticket.status}</span>
                                 </div>
                                 <p class="text-sm text-gray-400 leading-relaxed">${ticket.description}</p>
                                 <div class="mt-4 pt-3 border-t border-gray-700/50 flex flex-wrap gap-4 items-center justify-between text-xs text-gray-500 font-mono">
-                                    <div>Created By: <span class="text-gray-300">User #${ticket.created_by}</span></div>
+                                    <div>Created By: <span class="text-gray-300">${ticket.created_by_name || 'User #' + creatorId}</span></div>
+                                    <div>Category: <span class="text-blue-400 font-bold">${ticket.category_name || '#' + ticket.category}</span></div>
+                                    <div>Assignment: ${assignmentHtml}</div>
+                                    <div>Date: <span class="text-gray-300">${createdDate}</span></div>
                                     <div class="flex items-center space-x-2">
                                         <span>Priority:</span>
                                         <span class="px-2 py-0.5 rounded border text-[11px] font-medium ${priorityClass}">${ticket.priority}</span>
                                     </div>
                                 </div>
+                                ${actionButtons}
                             </div>
                         `;
-                        listContainer.innerHTML += card;
+
+                        if (isStaff) {
+                            if (isAssignedToMe) {
+                                myTicketsContainer.innerHTML += card;
+                                myTicketsCount++;
+                            } else {
+                                otherTicketsContainer.innerHTML += card;
+                                otherTicketsCount++;
+                            }
+                        } else {
+                            userTicketsContainer.innerHTML += card;
+                            userTicketsCount++;
+                        }
                     });
+
+                    if (!isStaff && userTicketsCount === 0) {
+                        userTicketsContainer.innerHTML = '<div class="text-gray-500 text-sm p-4 bg-gray-800/50 border border-gray-700/60 rounded-xl text-center">No matching tickets found.</div>';
+                    }
+                    if (isStaff && myTicketsCount === 0) {
+                        myTicketsContainer.innerHTML = '<div class="text-gray-500 text-sm p-4 bg-gray-800/50 border border-gray-700/60 rounded-xl text-center">No matching tickets assigned to you.</div>';
+                    }
+                    if (isStaff && otherTicketsCount === 0) {
+                        otherTicketsContainer.innerHTML = '<div class="text-gray-500 text-sm p-4 bg-gray-800/50 border border-gray-700/60 rounded-xl text-center">No matching global tickets found.</div>';
+                    }
+
                 } else {
                     alert('Session expired or unauthorized. Please login again.');
                     logout();
@@ -131,46 +268,80 @@
             }
         }
 
-        // 3. Handle Ticket Creation Form
+        let searchDebounceTimer;
+        document.getElementById('uiSearch').addEventListener('input', () => {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(fetchTickets, 300);
+        });
+
+        document.getElementById('uiStatus').addEventListener('change', fetchTickets);
+        document.getElementById('uiPriority').addEventListener('change', fetchTickets);
+        document.getElementById('uiCategory').addEventListener('input', fetchTickets);
+
+        // Reset elements listener
+        document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+            document.getElementById('uiSearch').value = '';
+            document.getElementById('uiStatus').value = '';
+            document.getElementById('uiPriority').value = '';
+            document.getElementById('uiCategory').value = '';
+            fetchTickets();
+        });
+
+
+        async function updateTicketStatus(ticketId, newStatus) {
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/tickets/api/tickets/${ticketId}/`, {
+                    method: 'PATCH',
+                    headers: { 'Authorization': 'Token ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (response.ok) fetchTickets(); 
+                else {
+                    const errData = await response.json();
+                    alert('Failed to update ticket: ' + JSON.stringify(errData));
+                }
+            } catch (error) { console.error('Error updating ticket:', error); }
+        }
+
         document.getElementById('createTicketForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const title = document.getElementById('ticketTitle').value;
             const description = document.getElementById('ticketDesc').value;
             const category = document.getElementById('ticketCategory').value;
+            const priority = document.getElementById('priority').value;
+            const fileInput = document.getElementById('attachment');
+            
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('description', description);
+            formData.append('category', parseInt(category));
+            formData.append('priority', priority);
+            if (fileInput.files[0]) formData.append('attachment', fileInput.files[0]);
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/api/tickets/', {
+                const response = await fetch('http://127.0.0.1:8000/tickets/api/tickets/', {
                     method: 'POST',
-                    headers: {
-                        'Authorization': 'Token ' + token,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        title: title,
-                        description: description,
-                        category: parseInt(category)
-                    })
+                    headers: { 'Authorization': 'Token ' + token },
+                    body: formData
                 });
 
                 if (response.ok) {
                     document.getElementById('createTicketForm').reset();
-                    fetchTickets(); // Hot reload list seamlessly
+                    fetchTickets();
                 } else {
                     const errData = await response.json();
                     alert('Failed to submit ticket: ' + JSON.stringify(errData));
                 }
-            } catch (error) {
-                console.error('Error creating ticket:', error);
-            }
+            } catch (error) { console.error('Error creating ticket:', error); }
         });
 
-        // 4. Logout Function
         function logout() {
-            localStorage.removeItem('user_token');
-            window.location.href = '/api/login-ui/';
+            localStorage.clear();
+            window.location.href = '/tickets/login-ui/'; 
         }
 
-        // Initialize view
+        // Initialize setup
         fetchTickets();
     </script>
 </body>

@@ -34,6 +34,12 @@
                 class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-blue-600/20 cursor-pointer">
                 Sign In
             </button>
+
+            <div class="mt-4 text-center text-sm text-gray-400">
+                Don't have an account? 
+                <a href="/tickets/register-ui/" class="text-blue-500 hover:text-blue-400 font-semibold transition">Register now</a>
+            </div>
+
         </form>
 
         <div id="messageBox" class="mt-6 p-4 rounded-xl text-sm border font-medium hidden"></div>
@@ -50,7 +56,7 @@
             messageBox.classList.add('hidden');
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/api/auth/login/', {
+                const response = await fetch('http://127.0.0.1:8000/tickets/auth/login/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -62,15 +68,38 @@
                 });
 
                 const data = await response.json();
-
+                
+                console.log("Backend Response Data:", data); 
                 if (response.ok) {
                     messageBox.className = 'mt-6 p-4 rounded-xl text-sm border font-medium bg-teal-500/10 text-teal-400 border-teal-500/20 block';
                     messageBox.innerText = 'Login successful! Redirecting...';
 
                     localStorage.setItem('user_token', data.token);
 
+                    let role = 'USER'; 
+                    if (data.role) {
+                        role = data.role;
+                    } else if (data.user && data.user.role) {
+                        role = data.user.role;
+                    } else if (data.user_role) {
+                        role = data.user_role;
+                    }
+
+                    localStorage.setItem('user_role', role.toUpperCase());
+                    console.log("Saved Role to LocalStorage:", role.toUpperCase());
+
+                    let userId = null;
+                    if (data.user && data.user.id) {
+                        userId = data.user.id;
+                    } else if (data.id) {
+                        userId = data.id;
+                    }
+                    
+                    localStorage.setItem('user_id', userId);
+                    console.log("Saved User ID to LocalStorage:", userId);
+
                     setTimeout(() => { 
-                        window.location.href = '/api/tickets-ui/'; 
+                        window.location.href = '/tickets/dashboard-ui/';
                     }, 1500);
 
                 } else {
@@ -81,7 +110,7 @@
             } catch (error) {
                 messageBox.className = 'mt-6 p-4 rounded-xl text-sm border font-medium bg-red-500/10 text-red-400 border-red-500/20 block';
                 messageBox.innerText = 'Server connection failed. Please ensure Django is running.';
-                console.error('Error:', error);
+                console.error('Error during login:', error);
             }
         });
     </script>

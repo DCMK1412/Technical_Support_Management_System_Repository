@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
+from django.db.models import Q
 
 from rest_framework import viewsets, permissions
 from rest_framework import status
@@ -16,6 +17,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
 from .models import Ticket, Category, TicketComment, TicketAttachment
 from .serializers import (
     TicketSerializer, 
@@ -26,10 +29,32 @@ from .serializers import (
     TicketAttachmentSerializer
 )
 
+
 User = get_user_model()
+
+# UI Views
+def dashboard_ui(request):
+    return render(request, 'tickets/dashboard.html')
+
+def login_page(request):
+    return render(request, 'tickets/login.html')
 
 def register_ui(request):
     return render(request, 'tickets/register.html')
+
+def tickets_page(request):
+    return render(request, 'tickets/tickets.html')
+
+def ticket_detail_ui(request):
+    return render(request, 'tickets/ticket_detail.html')
+
+def categories_ui(request):
+    return render(request, 'tickets/categories.html')
+
+def users_ui(request):
+    return render(request, 'tickets/users.html')
+
+
 
 # 1. Authentication Views (API)
 class RegisterView(APIView):
@@ -92,41 +117,50 @@ class ProfileView(APIView):
 
 
 # 2. Template Views (Dashboard)
-def login_page(request):
-    return render(request, 'tickets/login.html')
+class DashboardAPIView(APIView):
+    permission_classes = [IsAuthenticated]
 
-def tickets_page(request):
-    return render(request, 'tickets/tickets.html')
+    def get(self, request, format=None):
+        user = request.user
+        role = getattr(user, 'role', 'USER') 
 
-@login_required
-def admin_dashboard(request):
-    total_tickets = Ticket.objects.count()
-    open_tickets = Ticket.objects.filter(status='OPEN').count()
-    in_progress_tickets = Ticket.objects.filter(status='IN_PROGRESS').count()
-    waiting_tickets = Ticket.objects.filter(status='WAITING_FOR_USER').count()
-    resolved_tickets = Ticket.objects.filter(status='RESOLVED').count()
-    closed_tickets = Ticket.objects.filter(status='CLOSED').count()
-    
-    recent_tickets = Ticket.objects.order_by('-created_at')[:5]
-    categories = Category.objects.all()
-    
-    context = {
-        'total_tickets': total_tickets,
-        'open_tickets': open_tickets,
-        'in_progress_tickets': in_progress_tickets,
-        'waiting_tickets': waiting_tickets,
-        'resolved_tickets': resolved_tickets,
-        'closed_tickets': closed_tickets,
-        'recent_tickets': recent_tickets,
-        'categories': categories,
-    }
-    return render(request, 'tickets/dashboard.html', context)
+        metrics = {}
 
+        if role == 'ADMIN':
+            metrics['total'] = Ticket.objects.count()
+            metrics['open'] = Ticket.objects.filter(status='OPEN').count()
+            metrics['in_progress'] = Ticket.objects.filter(status='IN_PROGRESS').count()
+            metrics['pending'] = Ticket.objects.filter(status='PENDING').count() # حالة جديدة
+            metrics['resolved'] = Ticket.objects.filter(status='RESOLVED').count() # حالة جديدة
+            metrics['closed'] = Ticket.objects.filter(status='CLOSED').count()
+            metrics['users_count'] = User.objects.count()
+            metrics['support_count'] = User.objects.filter(role='SUPPORT').count()
+            
+        elif role == 'SUPPORT':
+            metrics['assigned_to_me'] = Ticket.objects.filter(assigned_to=user).count()
+            metrics['open'] = Ticket.objects.filter(status='OPEN', assigned_to__isnull=True).count()
+            metrics['in_progress'] = Ticket.objects.filter(status='IN_PROGRESS', assigned_to=user).count()
+            metrics['pending'] = Ticket.objects.filter(status='WAITING', assigned_to=user).count() 
+            metrics['resolved'] = Ticket.objects.filter(status='RESOLVED', assigned_to=user).count()
+            metrics['closed'] = Ticket.objects.filter(status='CLOSED', assigned_to=user).count()
+                        
+        else: # USER
+            metrics['open'] = Ticket.objects.filter(status='OPEN', created_by=user).count()
+            metrics['in_progress'] = Ticket.objects.filter(status='IN_PROGRESS', created_by=user).count()
+            metrics['pending'] = Ticket.objects.filter(status='PENDING', created_by=user).count() # حالة جديدة
+            metrics['resolved'] = Ticket.objects.filter(status='RESOLVED', created_by=user).count() # حالة جديدة
+            metrics['closed'] = Ticket.objects.filter(status='CLOSED', created_by=user).count()
+
+        return Response({
+            'role': role,
+            'metrics': metrics
+        }, status=status.HTTP_200_OK)
 
 
 # 3. Tickets Views (API)
 class TicketList(APIView):
     permission_classes = [IsAuthenticated] 
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request, format=None):
         user = request.user
@@ -134,7 +168,7 @@ class TicketList(APIView):
         if user.role == 'ADMIN':
             tickets = Ticket.objects.all()
         elif user.role == 'SUPPORT':
-            tickets = Ticket.objects.filter(assigned_to=user)
+            tickets = Ticket.objects.filter(Q(assigned_to=user) | Q(assigned_to__isnull=True))
         else:
             tickets = Ticket.objects.filter(created_by=user)
 
@@ -157,12 +191,22 @@ class TicketList(APIView):
         return Response(serializer.data)
 
     def post(self, request, format=None):
-        serializer = TicketSerializer(data=request.data)
+        # 1. Pass the request context so the serializer can build full URLs
+        serializer = TicketSerializer(data=request.data, context={'request': request})
+        
         if serializer.is_valid():
-            serializer.save(created_by=request.user, status='OPEN')
+            # 2. Save the ticket first
+            ticket = serializer.save(created_by=request.user, status='OPEN')
+            
+            if 'attachment' in request.FILES:
+                TicketAttachment.objects.create(
+                    ticket=ticket,
+                    file=request.FILES['attachment'],
+                    uploaded_by=request.user
+                )
+                
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
 class TicketDetail(APIView):
     permission_classes = [IsAuthenticated]
@@ -193,7 +237,8 @@ class TicketDetail(APIView):
         ticket = self.get_object(pk, request.user)
         if ticket is None:
             return Response({'error': 'Ticket not found or permission denied'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = TicketSerializer(ticket)
+        
+        serializer = TicketSerializer(ticket, context={'request': request})
         return Response(serializer.data)
 
     def put(self, request, pk, format=None):
@@ -213,11 +258,12 @@ class TicketDetail(APIView):
             if not set(request.data.keys()).issubset(allowed_support_fields):
                 return Response({'error': 'Support agents can only update status or priority'}, status=status.HTTP_403_FORBIDDEN)
 
-        serializer = TicketSerializer(ticket, data=request.data, partial=True)
+        serializer = TicketSerializer(ticket, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
     def delete(self, request, pk, format=None):
         if request.user.role != 'ADMIN':
@@ -377,13 +423,19 @@ class UserRoleUpdateView(APIView):
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         
+        # 1. Get the role and force uppercase to avoid case-sensitivity bugs
         new_role = request.data.get('role')
-        if new_role and new_role in ['USER', 'SUPPORT', 'ADMIN']:
+        if new_role:
+            new_role = str(new_role).strip().upper()
+            
+        # 2. Check validity
+        if new_role in ['USER', 'SUPPORT', 'ADMIN']:
             user_to_update.role = new_role
             user_to_update.save()
-            
-        return Response(UserSerializer(user_to_update).data, status=status.HTTP_200_OK)
+            return Response(UserSerializer(user_to_update).data, status=status.HTTP_200_OK)
     
+        return Response({'error': f'Invalid role provided: {new_role}'}, status=status.HTTP_400_BAD_REQUEST)
+
 class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
 

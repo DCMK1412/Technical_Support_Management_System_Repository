@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSMS - Categories</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans antialiased">
+
+    <nav class="bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+            <span class="text-2xl font-bold tracking-wider text-blue-500">TSMS</span>
+            <span class="text-xs text-gray-400 font-mono pl-2 border-l border-gray-600">Admin Portal</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <a href="/api/dashboard-ui/" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded transition font-medium">Dashboard</a>
+            <a href="/api/users-ui/" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded transition font-medium">Users</a>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 mb-8 shadow-sm">
+            <h3 class="text-lg font-bold text-white mb-4">Add New Category</h3>
+            <form id="categoryForm" class="flex gap-4 items-end">
+                <div class="flex-1">
+                    <label class="block text-xs font-semibold text-gray-400 uppercase mb-2">Category Name</label>
+                    <input type="text" id="catName" required  
+                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-100 focus:outline-none focus:border-blue-500 transition">
+                </div>
+                <div class="flex-2 w-1/2">
+                    <label class="block text-xs font-semibold text-gray-400 uppercase mb-2">Description</label>
+                    <input type="text" id="catDesc" 
+                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-100 focus:outline-none focus:border-blue-500 transition">
+                </div>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-5 py-2.5 rounded-lg transition shadow-md cursor-pointer">
+                    Add
+                </button>
+            </form>
+        </div>
+
+        <div>
+            <h2 class="text-xl font-bold text-white mb-4">Active Categories</h2>
+            <div id="categoriesList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+        </div>
+    </main>
+
+    <script>
+        const token = localStorage.getItem('user_token');
+        const role = localStorage.getItem('user_role');
+
+        if (!token || role !== 'ADMIN') {
+            window.location.href = '/api/dashboard-ui/';
+        }
+
+        async function fetchCategories() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/categories/', {
+                    headers: { 'Authorization': 'Token ' + token }
+                });
+
+                if (response.ok) {
+                    const categories = await response.json();
+                    const list = document.getElementById('categoriesList');
+                    list.innerHTML = '';
+
+                    if (categories.length === 0) {
+                        list.innerHTML = `<div class="col-span-2 text-center text-gray-500 py-4">No categories available.</div>`;
+                        return;
+                    }
+
+                    categories.forEach(cat => {
+                        list.innerHTML += `
+                            <div class="bg-gray-800 rounded-xl border border-gray-700 p-5 hover:border-gray-600 transition">
+                                <div class="flex justify-between items-start mb-2">
+                                    <h4 class="font-bold text-white">${cat.name}</h4>
+                                    <span class="text-xs text-gray-500 font-mono">ID: ${cat.id}</span>
+                                </div>
+                                <p class="text-sm text-gray-400">${cat.description || 'No description provided.'}</p>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+            }
+        }
+
+        document.getElementById('categoryForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('catName').value;
+            const desc = document.getElementById('catDesc').value;
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/categories/', {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': 'Token ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: name, description: desc })
+                });
+
+                if (response.ok) {
+                    document.getElementById('categoryForm').reset();
+                    fetchCategories(); 
+                } else {
+                    alert('Failed to add category.');
+                }
+            } catch (error) {
+                console.error('Error adding category:', error);
+            }
+        });
+
+        fetchCategories();
+    </script>
+</body>
+</html>
