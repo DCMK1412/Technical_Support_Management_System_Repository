@@ -130,8 +130,8 @@ class DashboardAPIView(APIView):
             metrics['total'] = Ticket.objects.count()
             metrics['open'] = Ticket.objects.filter(status='OPEN').count()
             metrics['in_progress'] = Ticket.objects.filter(status='IN_PROGRESS').count()
-            metrics['pending'] = Ticket.objects.filter(status='PENDING').count() # حالة جديدة
-            metrics['resolved'] = Ticket.objects.filter(status='RESOLVED').count() # حالة جديدة
+            metrics['waiting_for_user'] = Ticket.objects.filter(status='WAITING_FOR_USER').count()
+            metrics['resolved'] = Ticket.objects.filter(status='RESOLVED').count() 
             metrics['closed'] = Ticket.objects.filter(status='CLOSED').count()
             metrics['users_count'] = User.objects.count()
             metrics['support_count'] = User.objects.filter(role='SUPPORT').count()
@@ -140,15 +140,15 @@ class DashboardAPIView(APIView):
             metrics['assigned_to_me'] = Ticket.objects.filter(assigned_to=user).count()
             metrics['open'] = Ticket.objects.filter(status='OPEN', assigned_to__isnull=True).count()
             metrics['in_progress'] = Ticket.objects.filter(status='IN_PROGRESS', assigned_to=user).count()
-            metrics['pending'] = Ticket.objects.filter(status='WAITING', assigned_to=user).count() 
+            metrics['waiting_for_user'] = Ticket.objects.filter(status='WAITING_FOR_USER', assigned_to=user).count() 
             metrics['resolved'] = Ticket.objects.filter(status='RESOLVED', assigned_to=user).count()
             metrics['closed'] = Ticket.objects.filter(status='CLOSED', assigned_to=user).count()
                         
         else: # USER
             metrics['open'] = Ticket.objects.filter(status='OPEN', created_by=user).count()
             metrics['in_progress'] = Ticket.objects.filter(status='IN_PROGRESS', created_by=user).count()
-            metrics['pending'] = Ticket.objects.filter(status='PENDING', created_by=user).count() # حالة جديدة
-            metrics['resolved'] = Ticket.objects.filter(status='RESOLVED', created_by=user).count() # حالة جديدة
+            metrics['waiting_for_user'] = Ticket.objects.filter(status='WAITING_FOR_USER', created_by=user).count() 
+            metrics['resolved'] = Ticket.objects.filter(status='RESOLVED', created_by=user).count() 
             metrics['closed'] = Ticket.objects.filter(status='CLOSED', created_by=user).count()
 
         return Response({
@@ -253,7 +253,7 @@ class TicketDetail(APIView):
             return Response({'error': 'Not allowed'}, status=status.HTTP_403_FORBIDDEN)
         
         if request.user.role == 'SUPPORT':
-            allowed_support_fields = {'status', 'priority', 'assigned_to'}
+            allowed_support_fields = {'status', 'priority'}
     
             if not set(request.data.keys()).issubset(allowed_support_fields):
                 return Response({'error': 'Support agents can only update status or priority'}, status=status.HTTP_403_FORBIDDEN)
