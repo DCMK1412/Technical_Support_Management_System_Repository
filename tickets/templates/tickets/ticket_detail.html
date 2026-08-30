@@ -126,7 +126,7 @@
 
         async function loadTicketDetails() {
             try {
-                const response = await fetch(`http://127.0.0.1:8000/tickets/api/tickets/${ticketId}/`, {
+                const response = await fetch(`/tickets/api/tickets/${ticketId}/`, {
                     headers: { 'Authorization': 'Token ' + token }
                 });
                 if (response.ok) {
@@ -171,7 +171,7 @@
 
         async function loadComments() {
             try {
-                const response = await fetch(`http://127.0.0.1:8000/tickets/api/tickets/${ticketId}/comments/`, {
+                const response = await fetch(`/tickets/api/tickets/${ticketId}/comments/`, {
                     headers: { 'Authorization': 'Token ' + token }
                 });
                 
@@ -210,7 +210,7 @@
             if (!contentText) return alert('Please write a reply first.');
 
             try {
-                const response = await fetch(`http://127.0.0.1:8000/tickets/api/tickets/${ticketId}/comments/`, {
+                const response = await fetch(`/tickets/api/tickets/${ticketId}/comments/`, {
                     method: 'POST',
                     headers: {
                         'Authorization': 'Token ' + token,
@@ -235,7 +235,7 @@
 
         async function updateTicketStatus(newStatus) {
             try {
-                const response = await fetch(`http://127.0.0.1:8000/tickets/api/tickets/${ticketId}/`, {
+                const response = await fetch(`/tickets/api/tickets/${ticketId}/`, {
                     method: 'PATCH',
                     headers: {
                         'Authorization': 'Token ' + token,
@@ -254,7 +254,7 @@
 
         async function loadSupportUsers() {
             try {
-                const response = await fetch('http://127.0.0.1:8000/api/users/', {
+                const response = await fetch('/api/users/', {
                     headers: { 'Authorization': 'Token ' + token }
                 });
                 if (response.ok) {
@@ -275,7 +275,7 @@
             if(!userId) return alert('Please select a staff member.');
 
             try {
-                const response = await fetch(`http://127.0.0.1:8000/tickets/api/tickets/${ticketId}/`, {
+                const response = await fetch(`/tickets/api/tickets/${ticketId}/`, {
                     method: 'PATCH',
                     headers: {
                         'Authorization': 'Token ' + token,

@@ -150,7 +150,7 @@
                 if (priorityVal) params.append('priority', priorityVal);
                 if (categoryVal) params.append('category', categoryVal);
 
-                const targetUrl = `http://127.0.0.1:8000/tickets/api/tickets/?${params.toString()}`;
+                const targetUrl = `/tickets/api/tickets/?${params.toString()}`;
 
                 const response = await fetch(targetUrl, {
                     method: 'GET',
@@ -290,7 +290,7 @@
 
         async function updateTicketStatus(ticketId, newStatus) {
             try {
-                const response = await fetch(`http://127.0.0.1:8000/tickets/api/tickets/${ticketId}/`, {
+                const response = await fetch(`/tickets/api/tickets/${ticketId}/`, {
                     method: 'PATCH',
                     headers: { 'Authorization': 'Token ' + token, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: newStatus })
@@ -320,7 +320,7 @@
             if (fileInput.files[0]) formData.append('attachment', fileInput.files[0]);
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/tickets/api/tickets/', {
+                const response = await fetch('/tickets/api/tickets/', {
                     method: 'POST',
                     headers: { 'Authorization': 'Token ' + token },
                     body: formData

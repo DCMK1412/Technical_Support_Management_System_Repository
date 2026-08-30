@@ -58,7 +58,7 @@
 
         async function fetchUsers() {
             try {
-                const response = await fetch('http://127.0.0.1:8000/api/users/', {
+                const response = await fetch('/api/users/', {
                     headers: { 'Authorization': 'Token ' + token }
                 });
 
@@ -112,7 +112,7 @@
         async function updateRole(userId) {
             const newRole = document.getElementById(`roleSelect_${userId}`).value;
             try {
-                const response = await fetch(`http://127.0.0.1:8000/api/users/${userId}/role/`, { // تأكد من مسار التعديل
+                const response = await fetch(`/api/users/${userId}/role/`, { // تأكد من مسار التعديل
                     method: 'PATCH',
                     headers: { 
                         'Authorization': 'Token ' + token,

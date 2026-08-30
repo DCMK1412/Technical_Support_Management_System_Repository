@@ -49,7 +49,7 @@
 
         async function fetchDashboardData() {
             try {
-                const response = await fetch('http://127.0.0.1:8000/tickets/api-dashboard/', {
+                const response = await fetch('/tickets/api-dashboard/', {
                     headers: { 'Authorization': 'Token ' + token }
                 });
 
